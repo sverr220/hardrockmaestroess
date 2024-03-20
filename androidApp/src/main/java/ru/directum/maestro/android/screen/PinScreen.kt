@@ -37,18 +37,18 @@ fun PinScreen(success: () -> Unit = {}
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = "Maestro", fontSize = 24.sp)
+            Text(text = "Аутентификация", fontSize = 24.sp)
 
             Spacer(modifier = Modifier.height(10.dp))
             Box {
                 when {
                     isFullPin(pin.size, maxPinSize) && isPinCorrect.value -> Text(
-                        text = "Success",
+                        text = "Успешный ввод Pin кода",
                         color = Color.Green
                     )
 
-                    isFullPin(pin.size, maxPinSize) -> Text(text = "Error", color = Color.Red)
-                    else -> Text(text = "Verify $maxPinSize-digit security PIN")
+                    isFullPin(pin.size, maxPinSize) -> Text(text = "Неверный код", color = Color.Red)
+                    else -> Text(text = "Введите $maxPinSize значный PIN код")
                 }
             }
 
@@ -72,6 +72,10 @@ fun PinScreen(success: () -> Unit = {}
                 onNumberClick = {
                     if (pin.size < maxPinSize)
                         pin.add(it)
+                    else {
+                        pin.clear()
+                        pin.add(it)
+                    }
                 }
             )
 

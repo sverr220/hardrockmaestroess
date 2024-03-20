@@ -38,9 +38,7 @@ fun MainScreen() {
             }
 
             composable(Navigation.Profile.route) {
-                SettingsScreen(
-                    back = { navController.popBackStack() }
-                )
+                ProfileScreen()
             }
 
             composable(Navigation.Setting.route) {
