@@ -57,7 +57,12 @@ fun WebViewScreen(url: String, openSetting: () -> Unit) {
 
                     setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
                         //DownloadHelper.DownloadByManager(context, url, userAgent, contentDisposition, mimetype, contentLength)
-                        DownloadHelper.DownloadByURLConnection(context, url, userAgent, contentDisposition, mimetype, contentLength)
+                        Thread {
+                                DownloadHelper.DownloadByURLConnection(
+                                    url = url,
+                                    userAgent = userAgent
+                                )
+                        }.start()
                     }
                 }
             }, update = {

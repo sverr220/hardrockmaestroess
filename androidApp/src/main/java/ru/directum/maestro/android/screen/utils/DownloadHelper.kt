@@ -7,6 +7,8 @@ import android.os.Environment
 import android.util.Log
 import android.webkit.CookieManager
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -15,8 +17,10 @@ import java.net.URL
 
 class DownloadHelper {
     companion object {
-        fun DownloadByManager(context: Context, url: String, userAgent: String, contentDisposition: String,
-                              mimetype: String, contentLength: Long) {
+        fun DownloadByManager(
+            context: Context, url: String, userAgent: String, contentDisposition: String,
+            mimetype: String, contentLength: Long
+        ) {
             val uri = parse(url.replaceFirst("blob:", "").trim())
 
             val fileName = "test.pdf"
@@ -53,15 +57,15 @@ class DownloadHelper {
 
         }
 
-        fun DownloadByURLConnection(context: Context, url: String, userAgent: String, contentDisposition: String,
-                              mimetype: String, contentLength: Long) {
-            val filepath: String = Environment.getDataDirectory().absolutePath + "/fileName.pdf";
-            Log.d("stdout", "filepath $filepath")
+        fun DownloadByURLConnection(url: String, userAgent: String) {
+            val filepath: String = Environment.getDataDirectory().path + "/fileName.pdf";
+            Log.d("stdout", "filepath: $filepath")
 
-            val url2 = URL(url)
+            val url2 = URL(url.replaceFirst("blob:", "").trim())
+            Log.d("stdout", "url: $url2")
             val cookies: String = CookieManager.getInstance().getCookie(url2.host)
 
-            val con:HttpURLConnection = url2.openConnection() as HttpURLConnection
+            val con: HttpURLConnection = url2.openConnection() as HttpURLConnection
             con.requestMethod = "POST"
             con.setRequestProperty("Cookie", cookies)
             con.setRequestProperty("User-Agent", userAgent)
@@ -69,8 +73,8 @@ class DownloadHelper {
             con.doOutput = true
             con.connect()
 
-            Log.d("stdout", "ResponseCode ${con.responseCode}")
-            Log.d("stdout", "ResponseMessage ${con.responseMessage}")
+            Log.d("stdout", "ResponseCode: ${con.responseCode}")
+            Log.d("stdout", "ResponseMessage: ${con.responseMessage}")
 
             val output = DataOutputStream(con.outputStream)
             output.writeBytes("playload")
@@ -85,8 +89,7 @@ class DownloadHelper {
             val buffer = ByteArray(1024)
             var len: Int
 
-            while ((stream.read(buffer).also { len = it }) > 0)
-            {
+            while ((stream.read(buffer).also { len = it }) > 0) {
                 fos.write(buffer, 0, len)
             }
 
@@ -96,7 +99,7 @@ class DownloadHelper {
             fos.close()
 
             val fileExists = File(filepath).exists()
-            Log.d("stdout","Exists  $fileExists")
+            Log.d("stdout", "Exists  $fileExists")
             Log.d("stdout", "StartHttpURLConnection OK")
         }
     }
