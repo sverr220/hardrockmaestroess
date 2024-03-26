@@ -17,12 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import ru.directum.maestro.android.screen.utils.DownloadHelper
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun WebViewScreen(url: String, openSetting: () -> Unit) {
     Box(
         modifier = Modifier
+            .imePadding()
             .fillMaxSize()
             .background(Color.Cyan),
     ) {
@@ -54,18 +56,8 @@ fun WebViewScreen(url: String, openSetting: () -> Unit) {
                     settings.javaScriptCanOpenWindowsAutomatically = true
 
                     setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
-                        val uri = Uri.parse(url.replaceFirst("blob:", "").trim());
-
-                        val fileName = "test.pdf";
-
-                        val request = DownloadManager.Request(uri);
-
-                        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
-                        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                        request.addRequestHeader("User-Agent", userAgent);
-                        val downloadManager: DownloadManager? =
-                            context.getSystemService(DOWNLOAD_SERVICE) as DownloadManager?;
-                        downloadManager?.enqueue(request);
+                        //DownloadHelper.DownloadByManager(context, url, userAgent, contentDisposition, mimetype, contentLength)
+                        DownloadHelper.DownloadByURLConnection(context, url, userAgent, contentDisposition, mimetype, contentLength)
                     }
                 }
             }, update = {
