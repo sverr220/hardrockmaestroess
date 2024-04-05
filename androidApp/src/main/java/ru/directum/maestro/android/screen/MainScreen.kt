@@ -1,23 +1,20 @@
 package ru.directum.maestro.android.screen
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.*
 
 sealed class Navigation(val route: String) {
-    object InputURL : Navigation("inputUrl")
-    object WebView : Navigation("webView")
-    object Profile : Navigation("profile")
-    object Setting : Navigation("setting")
-    object Pin : Navigation("pin")
+    data object InputURL : Navigation("inputUrl")
+    data object WebView : Navigation("webView")
+    data object Setting : Navigation("setting")
+    data object Pin : Navigation("pin")
 }
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
     var urlUiState = remember { String() }
     NavHost(
         navController = navController,
@@ -27,18 +24,8 @@ fun MainScreen() {
                 InputURLScreen(
                     showWebView = { url ->
                         urlUiState = url
-                        navController.navigate(Navigation.WebView.route) },
-                    showProfileScreen = {
-                        navController.navigate(Navigation.Profile.route)
-                    },
-                    showPinCodeScreen = {
-                        navController.navigate(Navigation.Pin.route)
-                    }
+                        navController.navigate(Navigation.WebView.route) }
                 )
-            }
-
-            composable(Navigation.Profile.route) {
-                ProfileScreen()
             }
 
             composable(Navigation.Setting.route) {
@@ -56,8 +43,7 @@ fun MainScreen() {
             }
 
             composable(Navigation.WebView.route) {
-                WebViewScreen(urlUiState,
-                        openSetting = {navController.navigate(Navigation.Setting.route)} )
+                WebViewScreen(urlUiState)
             }
         })
 }

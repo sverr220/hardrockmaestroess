@@ -28,9 +28,9 @@ fun MyApplicationTheme(
         )
     } else {
         lightColorScheme(
-            primary = Color(0xFF6200EE),
-            secondary = Color(0xFF03DAC5),
-            tertiary = Color(0xFF3700B3)
+            primary = Color(0xFFFCAE48),
+            secondary = Color(0xFFFFFFFF),
+            tertiary = Color(0xFFF68D04)
         )
     }
     val typography = Typography(

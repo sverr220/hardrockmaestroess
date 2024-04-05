@@ -6,58 +6,102 @@ import android.net.Uri.*
 import android.os.Environment
 import android.util.Log
 import android.webkit.CookieManager
+import android.webkit.URLUtil
 import android.widget.Toast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLDecoder
+
 
 class DownloadHelper {
-    companion object {
-        fun DownloadByManager(
-            context: Context, url: String, userAgent: String, contentDisposition: String,
-            mimetype: String, contentLength: Long
-        ) {
-            val uri = parse(url.replaceFirst("blob:", "").trim())
 
-            val fileName = "test.pdf"
+    private fun downloadByReadableByteChannel(
+        context: Context, url: String, userAgent: String, contentDisposition: String,
+        mimeType: String, contentLength: Long
+    ) {
+        Log.d("stdout", "DownloadByReadableByteChannel url $url")
+        val clearURL = url.replaceFirst("blob:", "").trim()
+        val fileName = URLUtil.guessFileName(clearURL, contentDisposition, mimeType)
+        try {
+            Log.d("stdout", "fileName fileName $fileName")
+            val fullPath =
+                "${Environment.getExternalStorageDirectory().absolutePath}/${Environment.DIRECTORY_DOWNLOADS}/$fileName"
+            val file = File(fullPath)
+            file.createNewFile()
 
-            val request = DownloadManager.Request(uri)
-            request.setDescription("requested " + url + " downloading");
-            request.setTitle(url)
-            request.allowScanningByMediaScanner()
-            request.setVisibleInDownloadsUi(true)
+            val link = URL(clearURL)
+            Thread {
+                try {
+                    val inStream = link.openStream()
+                    val outStream = FileOutputStream(fullPath)
+                    val buffer = ByteArray(1024)
+                    var bytesRead: Int
+                    while (inStream.read(buffer).also { bytesRead = it } != -1) {
+                        outStream.write(buffer, 0, bytesRead)
+                    }
+                    inStream.close()
+                    outStream.close()
+                    Log.d("stdout", "DownloadByReadableByteChannel ok")
+                    Toast.makeText(context, "Downloading ${url}", Toast.LENGTH_LONG).show()
+                } catch (e: IOException) {
+                    Log.d("stdout", "error IO $e")
+                    e.printStackTrace()
+                }
+            }.start()
+        } catch (e: Exception) {
+            Log.d("stdout", "error $e")
+            e.printStackTrace()
+        }
+    }
 
-            val url2 = URL(url)
-            val cookies: String = CookieManager.getInstance().getCookie(url2.host)
+    private fun downloadByManager(
+        context: Context, url: String, userAgent: String, contentDisposition: String,
+        mimeType: String, contentLength: Long
+    ) {
+        Log.d("stdout", "downloadByManager: $url")
+        Log.d(
+            "stdout", "   userAgent: $userAgent mimetype: $mimeType " +
+                    "contentDisposition: $contentDisposition contentLength: $contentLength"
+        )
+
+        val clearURL = url.replaceFirst("blob:", "").trim()
+        val fileName = singleOutFileName(clearURL, contentDisposition, mimeType)
+        Log.d("stdout", "   fileName $fileName")
+
+        val request = DownloadManager.Request(parse(clearURL))
+            .setTitle("Загрузка документа $fileName")
+            .addRequestHeader("User-Agent", userAgent)
+            .setMimeType(mimeType)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+
+        try {
+            val cookies: String = CookieManager.getInstance().getCookie(URL(url).host)
             request.addRequestHeader("Cookie", cookies)
-            request.addRequestHeader("User-Agent", userAgent)
-            request.setMimeType(mimetype)
-
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            request.addRequestHeader("User-Agent", userAgent)
-            val downloadManager: DownloadManager? =
-                context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager?
-            var id = downloadManager?.enqueue(request)
-
-            Log.d("stdout", "id ${id}")
-            Log.d("stdout", "url ${url}")
-            Log.d("stdout", "cookies ${cookies}")
-            Log.d("stdout", "userAgent ${userAgent}")
-            Log.d("stdout", "mimetype ${mimetype}")
-            Log.d("stdout", "contentDisposition ${contentDisposition}")
-            Log.d("stdout", "contentLength ${contentLength}")
-
-            Toast.makeText(context, "Downloading ${url}", Toast.LENGTH_LONG).show()
-            Log.d("stdout", "StartDownloadManager OK")
-
+        } catch (e: Exception) {
+            Log.e("stdout", "getCookie Error ${e.message}")
         }
 
-        fun DownloadByURLConnection(url: String, userAgent: String) {
+        val downloadManager: DownloadManager? =
+            context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager?
+        val id = downloadManager?.enqueue(request)
+
+        Log.d("stdout", "   id ${id}")
+
+        Toast.makeText(context, "Downloading ${fileName}", Toast.LENGTH_LONG).show()
+        Log.d("stdout", "StartDownloadManager OK")
+
+    }
+
+    private fun downloadByURLConnection(
+        context: Context, url: String, userAgent: String, contentDisposition: String,
+        mimeType: String, contentLength: Long
+    ) {
+        Thread {
             val filepath: String = Environment.getDataDirectory().path + "/fileName.pdf";
             Log.d("stdout", "filepath: $filepath")
 
@@ -101,6 +145,48 @@ class DownloadHelper {
             val fileExists = File(filepath).exists()
             Log.d("stdout", "Exists  $fileExists")
             Log.d("stdout", "StartHttpURLConnection OK")
+        }.start()
+    }
+
+    private fun singleOutFileName(url: String, contentDisposition: String, mimeType: String): String {
+        val utf8FileNameConst = "filename*=UTF-8''"
+        val isExistUTF8FileNameInContent = contentDisposition.contains(utf8FileNameConst, ignoreCase = true)
+        if (isExistUTF8FileNameInContent) {
+            // filename*=UTF-8''000%28v1%29.png
+            val findName = URLDecoder.decode(contentDisposition.substring(contentDisposition.indexOf(utf8FileNameConst) + utf8FileNameConst.length), "UTF-8")
+            return if (findName.contains(";"))
+                findName.substring(0, findName.indexOf(";"))
+            else
+                findName
+        }
+
+        val fileNameConst = "filename=\""
+        val isExistFileNameInContent = contentDisposition.contains(fileNameConst, ignoreCase = true)
+        if (isExistFileNameInContent) {
+            // filename="000(v1).png";
+            val findName = URLDecoder.decode(contentDisposition.substring(contentDisposition.indexOf(fileNameConst) + fileNameConst.length), "UTF-8")
+            return if (findName.contains("\""))
+                findName.substring(0, findName.indexOf("\""))
+            else
+                findName
+        }
+
+        return URLUtil.guessFileName(url, contentDisposition, mimeType)
+    }
+
+    companion object {
+        fun download(
+            context: Context, url: String, userAgent: String, contentDisposition: String,
+            mimeType: String, contentLength: Long
+        ) {
+            DownloadHelper().downloadByManager(
+                context,
+                url,
+                userAgent,
+                contentDisposition,
+                mimeType,
+                contentLength
+            )
         }
     }
 }

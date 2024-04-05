@@ -14,22 +14,15 @@ import androidx.compose.ui.unit.*
 import ru.directum.maestro.android.screen.view.NumberBoard
 import ru.directum.maestro.android.screen.view.PinDots
 
-
-@Preview(showBackground = true,
-)
+@Preview(showBackground = true)
 @Composable
-fun PinScreen(success: () -> Unit = {}
+fun PinScreen(
+    success: () -> Unit = {}
 ) {
     val maxPinSize = 4
-    val pin = remember {
-        mutableStateListOf<String>()
-    }
-    val isPinCorrect = remember {
-        mutableStateOf(false)
-    }
-    val useBio = remember {
-        mutableStateOf(false)
-    }
+    val pin = remember { mutableStateListOf<String>() }
+    val isPinCorrect = remember { mutableStateOf(false) }
+    val useBio = remember { mutableStateOf(false) }
 
     Surface {
         Column(
@@ -47,7 +40,11 @@ fun PinScreen(success: () -> Unit = {}
                         color = Color.Green
                     )
 
-                    isFullPin(pin.size, maxPinSize) -> Text(text = "Неверный код", color = Color.Red)
+                    isFullPin(pin.size, maxPinSize) -> Text(
+                        text = "Неверный код",
+                        color = Color.Red
+                    )
+
                     else -> Text(text = "Введите $maxPinSize значный PIN код")
                 }
             }
@@ -59,14 +56,14 @@ fun PinScreen(success: () -> Unit = {}
             Spacer(modifier = Modifier.height(10.dp))
 
             val activity = LocalContext.current
-           /*if (canAuthenticateBiometric(activity)) {
-                Text(text = "Use Touch ID",
-                    color = Color(0xFF00695C),
-                    modifier = Modifier.clickable {
-                        useBio.value = true
-                    })
-                Spacer(modifier = Modifier.height(10.dp))
-            }*/
+            /*if (canAuthenticateBiometric(activity)) {
+                 Text(text = "Use Touch ID",
+                     color = Color(0xFF00695C),
+                     modifier = Modifier.clickable {
+                         useBio.value = true
+                     })
+                 Spacer(modifier = Modifier.height(10.dp))
+             }*/
 
             NumberBoard(
                 onNumberClick = {
