@@ -2,12 +2,18 @@ package ru.directum.maestro.android.screen.utils
 
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.net.Uri.*
 import android.os.Environment
+import android.provider.Browser
 import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.URLUtil
+import android.webkit.WebView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import ru.directum.maestro.android.R
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -25,7 +31,8 @@ class DownloadHelper {
     ) {
         Log.d("stdout", "DownloadByReadableByteChannel url $url")
         val clearURL = url.replaceFirst("blob:", "").trim()
-        val fileName = URLUtil.guessFileName(clearURL, contentDisposition, mimeType)
+        val fileName = singleOutFileName(clearURL, contentDisposition, mimeType)
+        Log.d("stdout", "   fileName $fileName")
         try {
             Log.d("stdout", "fileName fileName $fileName")
             val fullPath =
@@ -62,18 +69,12 @@ class DownloadHelper {
         context: Context, url: String, userAgent: String, contentDisposition: String,
         mimeType: String, contentLength: Long
     ) {
-        Log.d("stdout", "downloadByManager: $url")
-        Log.d(
-            "stdout", "   userAgent: $userAgent mimetype: $mimeType " +
-                    "contentDisposition: $contentDisposition contentLength: $contentLength"
-        )
-
         val clearURL = url.replaceFirst("blob:", "").trim()
         val fileName = singleOutFileName(clearURL, contentDisposition, mimeType)
         Log.d("stdout", "   fileName $fileName")
 
         val request = DownloadManager.Request(parse(clearURL))
-            .setTitle("Загрузка документа $fileName")
+            .setTitle(context.getString(R.string.download_document_title, fileName))
             .addRequestHeader("User-Agent", userAgent)
             .setMimeType(mimeType)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
@@ -102,12 +103,20 @@ class DownloadHelper {
         mimeType: String, contentLength: Long
     ) {
         Thread {
-            val filepath: String = Environment.getDataDirectory().path + "/fileName.pdf";
+            val clearURL = url.replaceFirst("blob:", "").trim()
+            val fileName = singleOutFileName(clearURL, contentDisposition, mimeType)
+            Log.d("stdout", "   fileName $fileName")
+            val filepath: String = Environment.getDataDirectory().path + "/" + fileName
             Log.d("stdout", "filepath: $filepath")
 
-            val url2 = URL(url.replaceFirst("blob:", "").trim())
+            val url2 = URL(clearURL)
             Log.d("stdout", "url: $url2")
-            val cookies: String = CookieManager.getInstance().getCookie(url2.host)
+            var cookies = ""
+            try {
+                cookies = CookieManager.getInstance().getCookie(URL(url).host)
+            } catch (e: Exception) {
+                Log.e("stdout", "getCookie Error ${e.message}")
+            }
 
             val con: HttpURLConnection = url2.openConnection() as HttpURLConnection
             con.requestMethod = "POST"
@@ -148,12 +157,20 @@ class DownloadHelper {
         }.start()
     }
 
-    private fun singleOutFileName(url: String, contentDisposition: String, mimeType: String): String {
+    private fun singleOutFileName(
+        url: String,
+        contentDisposition: String,
+        mimeType: String
+    ): String {
         val utf8FileNameConst = "filename*=UTF-8''"
-        val isExistUTF8FileNameInContent = contentDisposition.contains(utf8FileNameConst, ignoreCase = true)
+        val isExistUTF8FileNameInContent =
+            contentDisposition.contains(utf8FileNameConst, ignoreCase = true)
         if (isExistUTF8FileNameInContent) {
-            // filename*=UTF-8''000%28v1%29.png
-            val findName = URLDecoder.decode(contentDisposition.substring(contentDisposition.indexOf(utf8FileNameConst) + utf8FileNameConst.length), "UTF-8")
+            val findName = URLDecoder.decode(
+                contentDisposition.substring(
+                    contentDisposition.indexOf(utf8FileNameConst) + utf8FileNameConst.length
+                ), "UTF-8"
+            )
             return if (findName.contains(";"))
                 findName.substring(0, findName.indexOf(";"))
             else
@@ -163,8 +180,11 @@ class DownloadHelper {
         val fileNameConst = "filename=\""
         val isExistFileNameInContent = contentDisposition.contains(fileNameConst, ignoreCase = true)
         if (isExistFileNameInContent) {
-            // filename="000(v1).png";
-            val findName = URLDecoder.decode(contentDisposition.substring(contentDisposition.indexOf(fileNameConst) + fileNameConst.length), "UTF-8")
+            val findName = URLDecoder.decode(
+                contentDisposition.substring(
+                    contentDisposition.indexOf(fileNameConst) + fileNameConst.length
+                ), "UTF-8"
+            )
             return if (findName.contains("\""))
                 findName.substring(0, findName.indexOf("\""))
             else
@@ -176,17 +196,28 @@ class DownloadHelper {
 
     companion object {
         fun download(
-            context: Context, url: String, userAgent: String, contentDisposition: String,
+            context: Context, browser: WebView,
+            url: String, userAgent: String, contentDisposition: String,
             mimeType: String, contentLength: Long
         ) {
-            DownloadHelper().downloadByManager(
-                context,
-                url,
-                userAgent,
-                contentDisposition,
-                mimeType,
-                contentLength
+            Log.d("stdout", "download: $url")
+            Log.d(
+                "stdout", "   userAgent: $userAgent mimetype: $mimeType " +
+                        "contentDisposition: $contentDisposition contentLength: $contentLength"
             )
+
+            val downloadHelper = DownloadHelper()
+            if (url.contains("blob:")) {
+                browser.loadUrl(JavaScriptInterface.getBase64StringFromBlobUrl(url))
+            } else
+                downloadHelper.downloadByURLConnection(
+                    context,
+                    url,
+                    userAgent,
+                    contentDisposition,
+                    mimeType,
+                    contentLength
+                )
         }
     }
 }

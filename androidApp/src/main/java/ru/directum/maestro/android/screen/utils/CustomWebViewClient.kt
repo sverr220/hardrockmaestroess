@@ -2,7 +2,9 @@ package ru.directum.maestro.android.screen.utils
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.http.SslError
 import android.util.Log
+import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -28,6 +30,14 @@ class CustomWebViewClient(
         return true*/
 
         return super.shouldOverrideUrlLoading(view, request)
+    }
+
+    override fun onReceivedSslError(
+        view: WebView?,
+        handler: SslErrorHandler,
+        error: SslError?
+    ) {
+        handler.proceed() // Ignore SSL certificate errors
     }
 
     override fun onLoadResource(view: WebView?, url: String?) {

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="btn_next">Далее</string>
+    <string name="download_document_title">Загрузка документа %1$s</string>
 </resources>

@@ -11,12 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import ru.directum.maestro.Presentation.Model.WebViewViewModel
 import ru.directum.maestro.android.screen.utils.CustomWebChromeClient
 import ru.directum.maestro.android.screen.utils.CustomWebViewClient
 import ru.directum.maestro.android.screen.utils.DownloadHelper
+import ru.directum.maestro.android.screen.utils.JavaScriptInterface
 import java.net.URL
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -39,6 +41,7 @@ fun WebViewScreen(url: String) {
                     .align(Alignment.CenterHorizontally),
             )
 
+        val activity = LocalContext.current
         AndroidView(
             factory = { context ->
                 return@AndroidView WebView(context).apply {
@@ -68,9 +71,12 @@ fun WebViewScreen(url: String) {
                     settings.databaseEnabled = true
                     settings.javaScriptCanOpenWindowsAutomatically = true
 
+                    addJavascriptInterface(JavaScriptInterface(activity.applicationContext), "Android")
+
                     setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
                         DownloadHelper.download(
                             context,
+                            this,
                             url,
                             userAgent,
                             contentDisposition,
