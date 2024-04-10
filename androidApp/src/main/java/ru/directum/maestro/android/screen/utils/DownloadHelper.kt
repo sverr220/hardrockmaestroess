@@ -157,7 +157,7 @@ class DownloadHelper {
         }.start()
     }
 
-    private fun singleOutFileName(
+    fun singleOutFileName(
         url: String,
         contentDisposition: String,
         mimeType: String
@@ -208,7 +208,15 @@ class DownloadHelper {
 
             val downloadHelper = DownloadHelper()
             if (url.contains("blob:")) {
-                browser.loadUrl(JavaScriptInterface.getBase64StringFromBlobUrl(url))
+                browser.loadUrl(
+                    JavaScriptInterface.getBase64StringFromBlobUrl(
+                        url, downloadHelper.singleOutFileName(
+                            url,
+                            contentDisposition,
+                            mimeType
+                        )
+                    )
+                )
             } else
                 downloadHelper.downloadByURLConnection(
                     context,

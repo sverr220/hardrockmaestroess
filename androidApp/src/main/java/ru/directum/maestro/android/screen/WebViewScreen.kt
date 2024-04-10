@@ -70,6 +70,8 @@ fun WebViewScreen(url: String) {
                     settings.blockNetworkImage = false
                     settings.databaseEnabled = true
                     settings.javaScriptCanOpenWindowsAutomatically = true
+                    settings.defaultTextEncodingName = "utf-8"
+
 
                     addJavascriptInterface(JavaScriptInterface(activity.applicationContext), "Android")
 

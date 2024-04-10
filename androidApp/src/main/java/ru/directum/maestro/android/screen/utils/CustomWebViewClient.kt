@@ -2,6 +2,7 @@ package ru.directum.maestro.android.screen.utils
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.net.http.SslError
 import android.util.Log
 import android.webkit.SslErrorHandler
@@ -10,16 +11,17 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
+
 class CustomWebViewClient(
     private val context: Context,
     private val host: String,
     private val changeProgressBar: (value: Boolean) -> Unit
 ) : WebViewClient() {
 
-    /*override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+    override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
         Log.d("stdout", "shouldOverrideUrlLoading $url")
         return false
-    }*/
+    }
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
         Log.d("stdout", "new shouldOverrideUrlLoading ${request?.url}")

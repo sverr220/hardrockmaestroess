@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.util.Base64
@@ -27,24 +28,28 @@ import java.util.Date
 class JavaScriptInterface(private val context: Context) {
     @JavascriptInterface
     @Throws(IOException::class)
-    fun getBase64FromBlobData(base64Data: String) {
-        convertBase64StringToPdfAndStoreIt(base64Data)
+    fun getBase64FromBlobData(base64Data: String, fileName:String) {
+        convertBase64StringToPdfAndStoreIt(base64Data, fileName)
+    }
+    @JavascriptInterface
+    @Throws(IOException::class)
+    fun log(log: String) {
+        Log.i("stdout", " JavascriptInterface LOG: $log")
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Throws(IOException::class)
-    private fun convertBase64StringToPdfAndStoreIt(base64PDf: String) {
-        Log.e("BASE 64", base64PDf)
+    private fun convertBase64StringToPdfAndStoreIt(base64PDf: String, fileName:String) {
+        Log.i("stdout", base64PDf)
         val notificationId = 1
 
-        val currentDateTime = DateFormat.getDateTimeInstance().format(Date())
         val dwldsPath = File(
             Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS
-            ).toString() + "/fileName_" + currentDateTime + "_.pdf"
+            ).toString() + "/" + fileName
         )
-        val pdfAsBytes =
-            Base64.decode(base64PDf.replaceFirst("^data:application/pdf;base64,".toRegex(), ""), 0)
+        val base64 = base64PDf.substring(base64PDf.indexOf("base64,") + "base64,".length)
+        Log.i("stdout", base64)
+        val pdfAsBytes = Base64.decode(base64, 0)
         FileOutputStream(dwldsPath, false).use { os ->
             os.write(pdfAsBytes)
             os.flush()
@@ -86,38 +91,14 @@ class JavaScriptInterface(private val context: Context) {
         Toast.makeText(context, "PDF FILE DOWNLOADED!", Toast.LENGTH_SHORT).show()
     }
 
-    private fun singleOutFileName(url: String, contentDisposition: String, mimeType: String): String {
-        val utf8FileNameConst = "filename*=UTF-8''"
-        val isExistUTF8FileNameInContent = contentDisposition.contains(utf8FileNameConst, ignoreCase = true)
-        if (isExistUTF8FileNameInContent) {
-            // filename*=UTF-8''000%28v1%29.png
-            val findName = URLDecoder.decode(contentDisposition.substring(contentDisposition.indexOf(utf8FileNameConst) + utf8FileNameConst.length), "UTF-8")
-            return if (findName.contains(";"))
-                findName.substring(0, findName.indexOf(";"))
-            else
-                findName
-        }
-
-        val fileNameConst = "filename=\""
-        val isExistFileNameInContent = contentDisposition.contains(fileNameConst, ignoreCase = true)
-        if (isExistFileNameInContent) {
-            // filename="000(v1).png";
-            val findName = URLDecoder.decode(contentDisposition.substring(contentDisposition.indexOf(fileNameConst) + fileNameConst.length), "UTF-8")
-            return if (findName.contains("\""))
-                findName.substring(0, findName.indexOf("\""))
-            else
-                findName
-        }
-
-        return URLUtil.guessFileName(url, contentDisposition, mimeType)
-    }
-
     companion object {
         private const val CHANNEL_ID = "HR_PRO_CHANNEL"
-        fun getBase64StringFromBlobUrl(blobUrl: String): String {
+        fun getBase64StringFromBlobUrl(blobUrl: String, fileName: String): String {
+            Log.e("stdout", " getBase64StringFromBlobUrl : $blobUrl $fileName")
             return if (blobUrl.startsWith("blob")) {
+                //val url = blobUrl.replaceFirst("blob:", "").trim()
                 "javascript: var xhr = new XMLHttpRequest();" +
-                        "xhr.open('GET', '" + blobUrl + "', true);" +
+                        "xhr.open('GET', '$blobUrl', true);" +
                         "xhr.setRequestHeader('Content-type','application/pdf');" +
                         "xhr.responseType = 'blob';" +
                         "xhr.onload = function(e) {" +
@@ -127,7 +108,7 @@ class JavaScriptInterface(private val context: Context) {
                         "        reader.readAsDataURL(blobPdf);" +
                         "        reader.onloadend = function() {" +
                         "            base64data = reader.result;" +
-                        "            Android.getBase64FromBlobData(base64data);" +
+                        "            Android.getBase64FromBlobData(base64data, $fileName);" +
                         "        }" +
                         "    }" +
                         "};" +
