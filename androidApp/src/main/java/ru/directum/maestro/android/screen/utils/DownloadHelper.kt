@@ -210,11 +210,7 @@ class DownloadHelper {
             if (url.contains("blob:")) {
                 browser.loadUrl(
                     JavaScriptInterface.getBase64StringFromBlobUrl(
-                        url, downloadHelper.singleOutFileName(
-                            url,
-                            contentDisposition,
-                            mimeType
-                        )
+                        url, "1.pdf"
                     )
                 )
             } else

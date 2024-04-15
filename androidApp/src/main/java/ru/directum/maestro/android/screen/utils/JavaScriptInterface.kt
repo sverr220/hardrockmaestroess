@@ -39,7 +39,7 @@ class JavaScriptInterface(private val context: Context) {
 
     @Throws(IOException::class)
     private fun convertBase64StringToPdfAndStoreIt(base64PDf: String, fileName:String) {
-        Log.i("stdout", base64PDf)
+        Log.i("stdout", "convertBase64StringToPdfAndStoreIt: " + base64PDf)
         val notificationId = 1
 
         val dwldsPath = File(
@@ -94,7 +94,7 @@ class JavaScriptInterface(private val context: Context) {
     companion object {
         private const val CHANNEL_ID = "HR_PRO_CHANNEL"
         fun getBase64StringFromBlobUrl(blobUrl: String, fileName: String): String {
-            Log.e("stdout", " getBase64StringFromBlobUrl : $blobUrl $fileName")
+            Log.i("stdout", " getBase64StringFromBlobUrl : $blobUrl $fileName")
             return if (blobUrl.startsWith("blob")) {
                 //val url = blobUrl.replaceFirst("blob:", "").trim()
                 "javascript: var xhr = new XMLHttpRequest();" +
@@ -108,7 +108,7 @@ class JavaScriptInterface(private val context: Context) {
                         "        reader.readAsDataURL(blobPdf);" +
                         "        reader.onloadend = function() {" +
                         "            base64data = reader.result;" +
-                        "            Android.getBase64FromBlobData(base64data, $fileName);" +
+                        "            MobApp.getBase64FromBlobData(base64data, $fileName);" +
                         "        }" +
                         "    }" +
                         "};" +

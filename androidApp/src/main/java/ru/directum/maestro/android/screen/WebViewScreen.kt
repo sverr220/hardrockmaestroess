@@ -72,8 +72,7 @@ fun WebViewScreen(url: String) {
                     settings.javaScriptCanOpenWindowsAutomatically = true
                     settings.defaultTextEncodingName = "utf-8"
 
-
-                    addJavascriptInterface(JavaScriptInterface(activity.applicationContext), "Android")
+                    addJavascriptInterface(JavaScriptInterface(activity.applicationContext), "MobApp")
 
                     setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
                         DownloadHelper.download(
