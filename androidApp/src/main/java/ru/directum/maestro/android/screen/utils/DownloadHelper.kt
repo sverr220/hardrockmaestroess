@@ -7,6 +7,7 @@ import android.net.Uri
 import android.net.Uri.*
 import android.os.Environment
 import android.provider.Browser
+import android.text.TextUtils
 import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.URLUtil
@@ -21,6 +22,14 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
+import java.security.SecureRandom
+import java.security.cert.CertificateException
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 
 class DownloadHelper {
@@ -99,14 +108,14 @@ class DownloadHelper {
     }
 
     private fun downloadByURLConnection(
-        context: Context, url: String, userAgent: String, contentDisposition: String,
-        mimeType: String, contentLength: Long
+        context: Context, url: String, userAgent: String?, contentDisposition: String?,
+        mimeType: String?
     ) {
         Thread {
             val clearURL = url.replaceFirst("blob:", "").trim()
             val fileName = singleOutFileName(clearURL, contentDisposition, mimeType)
             Log.d("stdout", "   fileName $fileName")
-            val filepath: String = Environment.getDataDirectory().path + "/" + fileName
+            val filepath: String = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path + "/" + fileName
             Log.d("stdout", "filepath: $filepath")
 
             val url2 = URL(clearURL)
@@ -118,20 +127,35 @@ class DownloadHelper {
                 Log.e("stdout", "getCookie Error ${e.message}")
             }
 
-            val con: HttpURLConnection = url2.openConnection() as HttpURLConnection
-            con.requestMethod = "POST"
+            val trustAllCerts: Array<TrustManager> = arrayOf(
+                object : X509TrustManager {
+                    @Throws(CertificateException::class)
+                    override fun checkClientTrusted(chain: Array<X509Certificate?>?,
+                                                    authType: String?) = Unit
+
+                    @Throws(CertificateException::class)
+                    override fun checkServerTrusted(chain: Array<X509Certificate?>?,
+                                                    authType: String?) = Unit
+
+                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                }
+            )
+            val sslContext: SSLContext = SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, SecureRandom())
+            val sslSocketFactory: SSLSocketFactory = sslContext.socketFactory
+
+
+            val con: HttpsURLConnection = url2.openConnection() as HttpsURLConnection
+            con.requestMethod = "GET"
             con.setRequestProperty("Cookie", cookies)
             con.setRequestProperty("User-Agent", userAgent)
             con.doInput = true
             con.doOutput = true
+            con.sslSocketFactory = sslSocketFactory
             con.connect()
 
             Log.d("stdout", "ResponseCode: ${con.responseCode}")
             Log.d("stdout", "ResponseMessage: ${con.responseMessage}")
-
-            val output = DataOutputStream(con.outputStream)
-            output.writeBytes("playload")
-            output.close();
 
             val stream = con.inputStream
 
@@ -157,41 +181,41 @@ class DownloadHelper {
         }.start()
     }
 
-    fun singleOutFileName(
+    private fun singleOutFileName(
         url: String,
-        contentDisposition: String,
-        mimeType: String
+        contentDisposition: String?,
+        mimeType: String?
     ): String {
-        val utf8FileNameConst = "filename*=UTF-8''"
-        val isExistUTF8FileNameInContent =
-            contentDisposition.contains(utf8FileNameConst, ignoreCase = true)
-        if (isExistUTF8FileNameInContent) {
-            val findName = URLDecoder.decode(
-                contentDisposition.substring(
-                    contentDisposition.indexOf(utf8FileNameConst) + utf8FileNameConst.length
-                ), "UTF-8"
-            )
-            return if (findName.contains(";"))
-                findName.substring(0, findName.indexOf(";"))
-            else
-                findName
-        }
 
-        val fileNameConst = "filename=\""
-        val isExistFileNameInContent = contentDisposition.contains(fileNameConst, ignoreCase = true)
-        if (isExistFileNameInContent) {
-            val findName = URLDecoder.decode(
-                contentDisposition.substring(
-                    contentDisposition.indexOf(fileNameConst) + fileNameConst.length
-                ), "UTF-8"
-            )
-            return if (findName.contains("\""))
-                findName.substring(0, findName.indexOf("\""))
-            else
-                findName
-        }
+        var filename = findFileNameInContentDisposition("filename*=UTF-8''", contentDisposition)
+        if (!TextUtils.isEmpty(filename))
+            return filename!!
+
+        filename = findFileNameInContentDisposition("filename=\"", contentDisposition)
+        if (!TextUtils.isEmpty(filename))
+            return filename!!
 
         return URLUtil.guessFileName(url, contentDisposition, mimeType)
+    }
+
+    private fun findFileNameInContentDisposition(
+        subString: String,
+        contentDisposition: String?
+    ): String? {
+        val isExistFileNameInContent =
+            contentDisposition?.contains(subString, ignoreCase = true) == true
+        if (isExistFileNameInContent) {
+            val findName = URLDecoder.decode(
+                contentDisposition!!.substring(
+                    contentDisposition.indexOf(subString) + subString.length
+                ), "UTF-8"
+            )
+            return when {
+                findName.contains("\"") -> findName.substring(0, findName.indexOf("\""))
+                else -> findName
+            }
+        }
+        return null
     }
 
     companion object {
@@ -219,8 +243,7 @@ class DownloadHelper {
                     url,
                     userAgent,
                     contentDisposition,
-                    mimeType,
-                    contentLength
+                    mimeType
                 )
         }
     }
