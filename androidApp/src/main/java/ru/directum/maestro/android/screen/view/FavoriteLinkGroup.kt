@@ -22,6 +22,10 @@ import androidx.compose.ui.unit.dp
 class FavoriteLinkGroup {
 
     private sealed class FavoriteLink(val text: String, val url: String) {
+        data object OtpgClient : FavoriteLink(
+            "otpgclient",
+            "https://irnomad.directum.ru/otpgclient/#/"
+        )
         data object GoogleDocs : FavoriteLink(
             "GoogleDocs",
             "https://drive.google.com/drive/u/0/folders/1J3xTmCkyUKgsHsWgGJ9ZDiO5kBlZf7rR"
@@ -49,6 +53,7 @@ class FavoriteLinkGroup {
                     .wrapContentSize(Alignment.Center)
                     .verticalScroll(rememberScrollState())
             ) {
+                FavoriteRow(FavoriteLink.OtpgClient, connectToUrl)
                 FavoriteRow(FavoriteLink.GoogleDocs, connectToUrl)
                 FavoriteRow(FavoriteLink.DotNet, connectToUrl)
                 FavoriteRow(FavoriteLink.Yandex, connectToUrl)
